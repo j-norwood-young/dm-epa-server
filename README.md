@@ -19,11 +19,16 @@ PASSWORD=your_password
 PORT=80
 APIUSERNAME=api_username
 APIPASSWORD=api_password
+APIKEY=blahblah
 ```
 
 The application will launch headless if `ENVIRONMENT=production`.
 
-Leave APIUSERNAME out to skip basic auth.
+Use APIUSERNAME/APIPASSWORD for basic auth.
+
+Use APIKEY to be able to send `?apikey=blahblah` as a parameter for auth.
+
+Leave out APIUSERNAME and APIKEY for no authentication.
 
 ## Launching
 `npm start`

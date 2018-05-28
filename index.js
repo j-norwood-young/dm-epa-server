@@ -15,6 +15,7 @@ var logged_in = false;
 
 // Authorization
 var authorization = (req, res, next) => {
+	if (process.env.APIKEY && req.query.apikey && process.env.APIKEY === req.query.apikey) return next();
 	if (!process.env.APIUSERNAME) return next();
 	if (!req.authorization.basic)
 		return res.send(403, { status: "error", message: "Forbidden" });
