@@ -135,7 +135,8 @@ const cors = corsMiddleware({
 				uid = uid.trim();
 				// let download_url = "Placeholder";
 				// console.log({ uid, blurb, src, download_url, original_url });
-				let download_url = `${ process.env.LOCAL_URL }/download?url=${ Buffer.from(original_url).toString('base64') }`
+				let download_url = `${ process.env.LOCAL_URL }/download?url=${ Buffer.from(original_url).toString('base64') }`;
+				if (process.env.APIKEY) download_url += `&apikey=${ process.env.APIKEY }`;
 				data.push({ uid, blurb, src, download_url, original_url });
 			}
 		});
@@ -163,7 +164,7 @@ const cors = corsMiddleware({
 				uid = uid.trim();
 				// let download_url = "Placeholder";
 				// console.log({ uid, blurb, src, download_url, original_url });
-				let download_url = `${ server.url }/download?url=${ Buffer.from(original_url).toString('base64') }`
+				let download_url = `${ server.url }/download?url=${ Buffer.from(original_url).toString('base64') }`;
 				data.push({ uid, blurb, src, download_url, original_url });
 			}
 		});
