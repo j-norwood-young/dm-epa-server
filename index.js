@@ -26,17 +26,21 @@ var authorization = (req, res, next) => {
 
 const epaLogin = async (page) => {
 	console.log("Loading url", process.env.LOGIN_URL);
-	await page.goto(process.env.LOGIN_URL);
+	try {
+		await page.goto(process.env.LOGIN_URL);
 
-	// Login
-	await page.waitForSelector("input[name='LOGINNAME']");
+		// Login
+		await page.waitForSelector("input[name='LOGINNAME']");
 
-	await page.type("input[name='LOGINNAME']", process.env.USERNAME);
-	await page.type("input[name='PASSWORD']", process.env.PASSWORD);
-	await page.click("form > div.controls > input.button.button-login.submit");
-	await page.waitForSelector(".user_welcome_message");
+		await page.type("input[name='LOGINNAME']", process.env.USERNAME);
+		await page.type("input[name='PASSWORD']", process.env.PASSWORD);
+		await page.click("form > div.controls > input.button.button-login.submit");
+		await page.waitForSelector(".user_welcome_message");
 
-	console.log("Logged in!");
+		console.log("Logged in!");
+	} catch(err) {
+		console.error("Login failed", err);
+	}
 	logged_in = new Date();
 	return;
 }
@@ -128,6 +132,7 @@ const cors = corsMiddleware({
 			let download = $(el).find(".downloadhighres").find("a");
 			let media_item_number = $(el).find(".media-item-medianumber");
 			if (image.length && download.length && media_item_number.length) {
+				let headline = $(el).find(".metadata-value").text();
 				let blurb = $(image).attr("alt");
 				let src = process.env.BASE_URL + $(image).attr("src");
 				let original_url = process.env.BASE_URL + $(download).attr("href");
@@ -137,7 +142,7 @@ const cors = corsMiddleware({
 				// console.log({ uid, blurb, src, download_url, original_url });
 				let download_url = `${ process.env.LOCAL_URL }/download?url=${ Buffer.from(original_url).toString('base64') }`;
 				if (process.env.APIKEY) download_url += `&apikey=${ process.env.APIKEY }`;
-				data.push({ uid, blurb, src, download_url, original_url });
+				data.push({ uid, headline, blurb, src, download_url, original_url });
 			}
 		});
 		res.send({
@@ -157,6 +162,7 @@ const cors = corsMiddleware({
 			let download = $(el).find(".downloadhighres").find("a");
 			let media_item_number = $(el).find(".media-item-medianumber");
 			if (image.length && download.length && media_item_number.length) {
+				let headline = $(el).find(".metadata-value").text();
 				let blurb = $(image).attr("alt");
 				let src = $(image).attr("src");
 				let original_url = $(download).attr("href");
@@ -165,7 +171,7 @@ const cors = corsMiddleware({
 				// let download_url = "Placeholder";
 				// console.log({ uid, blurb, src, download_url, original_url });
 				let download_url = `${ server.url }/download?url=${ Buffer.from(original_url).toString('base64') }`;
-				data.push({ uid, blurb, src, download_url, original_url });
+				data.push({ uid, headline, blurb, src, download_url, original_url });
 			}
 		});
 		res.send({
@@ -207,6 +213,10 @@ const cors = corsMiddleware({
 
 	await page.setRequestInterception(true);
 	await epaLogin(page);
+
+	const refresh_mins = process.env.REFRESH_MINS || 30;
+
+	setInterval(async function() { await epaLogin(page); }, refresh_mins * 60000);
 
 	// browser.close();
 })();
