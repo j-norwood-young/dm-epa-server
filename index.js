@@ -8,6 +8,7 @@ const request = require("request-promise-native");
 const md5 = require("md5");
 const corsMiddleware = require('restify-cors-middleware');
 const cheerio = require("cheerio");
+const Jimp = require("jimp");
 
 require("dotenv").config();
 
@@ -62,7 +63,7 @@ const cors = corsMiddleware({
 
 	// Start server
 	var server = restify.createServer();
-	
+
 	server.pre(cors.preflight);
 	server.use(cors.actual);
 
@@ -84,24 +85,41 @@ const cors = corsMiddleware({
 	server.use(checkLogin);
 
 	server.get("/download", async (req, res) => {
+		var processImage = async (filePath, res) => {
+			var image = await Jimp.read(filePath);
+			image.cover(1920, 960).quality(75);
+			image.getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
+				res.set("Content-Type", Jimp.MIME_JPEG);
+				res.set("Content-Disposition", `attachment; filename=${ md5(filePath) }.jpg`);
+				res.send(buffer);
+			});
+		}
 		try {
 			let url = Buffer.from(req.query.url, "base64").toString("ascii");
 			console.log({ url });
-			res.writeHead(200, {
-				"Content-Type": 'image/jpeg',
-				"Content-Disposition": `attachment; filename=${ md5(url) }.jpg`
-			});
 			let cookies = await page.cookies();
 			let jar = request.jar();
 			let data = null;
 			for (let cookie of cookies) {
 				jar.setCookie(`${cookie.name}=${cookie.value}`, process.env.BASE_URL);
 			}
-			var response = await request({ url, jar }).pipe(res);
+			let filePath = path.resolve(`./downloads/cache/${ md5(url) }.jpg`);
+			const fileExists = await fse.pathExists(filePath);
+			if (!fileExists) {
+				var writeStream = fs.createWriteStream(filePath);
+				writeStream.on("finish", async function() {
+					console.log(filePath, "Not cached");
+					processImage(filePath, res);
+				})
+				request({ url, jar }).pipe(writeStream);
+			} else {
+				console.log(filePath, "Cached");
+				processImage(filePath, res);
+			}
 		} catch(err) {
 			console.trace(err);
 			return res.send({ status: "error", message: err });
-		}
+		};
 	});
 
 	var search = async (req, res) => {
@@ -188,7 +206,7 @@ const cors = corsMiddleware({
 	const browser = await puppeteer.launch({ headless, timeout: 5000 });
 	const page = await browser.newPage();
 
-	
+
 	page.on("request", async request => {
 		var url = await request.url();
 		if (['image', 'stylesheet', 'font', 'script'].indexOf(request.resourceType()) !== -1) {
