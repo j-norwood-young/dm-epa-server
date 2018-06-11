@@ -87,7 +87,7 @@ const cors = corsMiddleware({
 	server.get("/download", async (req, res) => {
 		var processImage = async (filePath, res) => {
 			var image = await Jimp.read(filePath);
-			image.cover(1920, 960).quality(75);
+			image.scaleToFit(1920, 960).quality(75);
 			image.getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
 				res.set("Content-Type", Jimp.MIME_JPEG);
 				res.set("Content-Disposition", `attachment; filename=${ md5(filePath) }.jpg`);
