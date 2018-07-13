@@ -138,7 +138,7 @@ const cors = corsMiddleware({
 		var searchstr = req.query.s;
 		var url = process.env.SEARCH_URL.replace("SEARCHSTR", searchstr);
 		try {
-			let cookies = await page.cookies();
+			var cookies = await page.cookies();
 		} catch(err) {
 			console.error(error);
 		}
