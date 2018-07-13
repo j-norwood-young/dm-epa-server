@@ -113,7 +113,7 @@ const cors = corsMiddleware({
 			}
 			let filePath = path.resolve(`./downloads/cache/${ md5(url) }.jpg`);
 			try {
-				const fileExists = await fse.pathExists(filePath);
+				var fileExists = await fse.pathExists(filePath);
 			} catch(err) {
 				console.error(error);
 			}
