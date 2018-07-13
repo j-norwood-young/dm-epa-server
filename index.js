@@ -16,7 +16,7 @@ var logged_in = false;
 
 // Authorization
 var authorization = (req, res, next) => {
-	console.log(req.query);
+	// console.log(req.query);
 	if (process.env.APIKEY && req.query.apikey && process.env.APIKEY === req.query.apikey) return next();
 	if (!process.env.APIUSERNAME && !process.env.APIKEY) return next();
 	if (!req.authorization.basic)
@@ -89,7 +89,7 @@ const cors = corsMiddleware({
 			try {
 				var image = await Jimp.read(filePath);
 			} catch(err) {
-				console.trace(error);
+				console.error(error);
 			}
 			image.scaleToFit(1920, 1920).quality(75);
 			image.getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
@@ -104,7 +104,7 @@ const cors = corsMiddleware({
 			try {
 				let cookies = await page.cookies();
 			} catch(err) {
-				console.trace(error);
+				console.error(error);
 			}
 			let jar = request.jar();
 			let data = null;
@@ -115,7 +115,7 @@ const cors = corsMiddleware({
 			try {
 				const fileExists = await fse.pathExists(filePath);
 			} catch(err) {
-				console.trace(error);
+				console.error(error);
 			}
 			if (!fileExists) {
 				var writeStream = fs.createWriteStream(filePath);
@@ -129,7 +129,7 @@ const cors = corsMiddleware({
 				processImage(filePath, res);
 			}
 		} catch(err) {
-			console.trace(err);
+			console.error(err);
 			return res.send({ status: "error", message: err });
 		};
 	});
@@ -137,12 +137,10 @@ const cors = corsMiddleware({
 	var search = async (req, res) => {
 		var searchstr = req.query.s;
 		var url = process.env.SEARCH_URL.replace("SEARCHSTR", searchstr);
-		// console.log(`Navigating to ${url}`)
-		// await page.goto(url);
 		try {
 			let cookies = await page.cookies();
 		} catch(err) {
-			console.trace(error);
+			console.error(error);
 		}
 		let jar = request.jar();
 		for (let cookie of cookies) {
@@ -151,7 +149,7 @@ const cors = corsMiddleware({
 		try {
 			var result = await request({ url, jar });
 		} catch(err) {
-			console.trace(err);
+			console.error(err);
 			return res.send({ status: "error", message: err });
 		}
 		var $ = cheerio.load(result);
@@ -160,7 +158,7 @@ const cors = corsMiddleware({
 			try {
 				await epaLogin(page);
 			} catch(err) {
-				console.trace(error);
+				console.error(error);
 			}
 			return search(req, res);
 		}
@@ -223,18 +221,19 @@ const cors = corsMiddleware({
 	});
 
 	try {
-		const headless = (process.env.ENVIRONMENT === "production");
-		const browser = await puppeteer.launch({ headless, timeout: 5000 });
-		const page = await browser.newPage();
+		var headless = (process.env.ENVIRONMENT === "production");
+		console.log("Loading Pupeteer, headless": headless);
+		var browser = await puppeteer.launch({ headless, timeout: 5000 });
+		var page = await browser.newPage();
 	} catch(err) {
-		console.trace(error);
+		console.error(error);
 	}
 
 	page.on("request", async request => {
 		try {
 			var url = await request.url();
 		} catch(err) {
-			console.trace(error);
+			console.error(error);
 		}
 		if (['image', 'stylesheet', 'font', 'script'].indexOf(request.resourceType()) !== -1) {
 			// console.log("Skipping", url);
@@ -255,7 +254,7 @@ const cors = corsMiddleware({
 			try {
 				await fse.outputFile(filePath, await response.buffer());
 			} catch(err) {
-				console.trace(err);
+				console.error(err);
 			}
 		}
 	});
@@ -264,7 +263,7 @@ const cors = corsMiddleware({
 		await page.setRequestInterception(true);
 		await epaLogin(page);
 	} catch(err) {
-		console.trace(error);
+		console.error(error);
 	}
 
 	const refresh_mins = process.env.REFRESH_MINS || 10;
@@ -273,7 +272,7 @@ const cors = corsMiddleware({
 		try {
 			await epaLogin(page);
 		} catch(err) {
-			console.trace(err);
+			console.error(err);
 		}
 	}, refresh_mins * 60000);
 
