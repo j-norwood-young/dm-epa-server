@@ -222,7 +222,7 @@ const cors = corsMiddleware({
 
 	try {
 		var headless = (process.env.ENVIRONMENT === "production");
-		console.log("Loading Pupeteer, headless": headless);
+		console.log("Loading Pupeteer, headless", headless);
 		var browser = await puppeteer.launch({ headless, timeout: 5000 });
 		var page = await browser.newPage();
 	} catch(err) {
