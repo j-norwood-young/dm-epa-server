@@ -84,17 +84,20 @@ const cors = corsMiddleware({
 
 	server.get("/download", async (req, res) => {
 		var processImage = async (filePath, res) => {
+			console.time("processImage");
 			try {
 				var image = await Jimp.read(filePath);
+				image.scaleToFit(1920, 1920).quality(75);
+				image.getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
+					res.set("Content-Type", Jimp.MIME_JPEG);
+					res.set("Content-Disposition", `attachment; filename=${ md5(filePath) }.jpg`);
+					res.send(buffer);
+					console.timeEnd("processImage");
+				});
 			} catch(err) {
 				console.error(err);
+				throw(err);
 			}
-			image.scaleToFit(1920, 1920).quality(75);
-			image.getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
-				res.set("Content-Type", Jimp.MIME_JPEG);
-				res.set("Content-Disposition", `attachment; filename=${ md5(filePath) }.jpg`);
-				res.send(buffer);
-			});
 		}
 		try {
 			let url = Buffer.from(req.query.url, "base64").toString("ascii");
