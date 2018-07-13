@@ -29,7 +29,6 @@ const epaLogin = async (page) => {
 	console.log("Loading url", process.env.LOGIN_URL);
 	try {
 		await page.goto(process.env.LOGIN_URL);
-
 		// Login
 		await page.waitForSelector("input[name='LOGINNAME']");
 
@@ -37,7 +36,6 @@ const epaLogin = async (page) => {
 		await page.type("input[name='PASSWORD']", process.env.PASSWORD);
 		await page.click("form > div.controls > input.button.button-login.submit");
 		await page.waitForSelector(".user_welcome_message");
-
 		console.log("Logged in!");
 	} catch(err) {
 		console.error("Login failed", err);
@@ -89,7 +87,7 @@ const cors = corsMiddleware({
 			try {
 				var image = await Jimp.read(filePath);
 			} catch(err) {
-				console.error(error);
+				console.error(err);
 			}
 			image.scaleToFit(1920, 1920).quality(75);
 			image.getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
@@ -112,22 +110,22 @@ const cors = corsMiddleware({
 				jar.setCookie(`${cookie.name}=${cookie.value}`, process.env.BASE_URL);
 			}
 			let filePath = path.resolve(`./downloads/cache/${ md5(url) }.jpg`);
-			try {
-				var fileExists = await fse.pathExists(filePath);
-			} catch(err) {
-				console.error(error);
-			}
-			if (!fileExists) {
+			// try {
+			// 	var fileExists = await fse.pathExists(filePath);
+			// } catch(err) {
+			// 	console.error(error);
+			// }
+			// if (!fileExists) {
 				var writeStream = fs.createWriteStream(filePath);
 				writeStream.on("finish", async function() {
 					console.log(filePath, "Not cached");
 					processImage(filePath, res);
 				})
 				request({ url, jar }).pipe(writeStream);
-			} else {
-				console.log(filePath, "Cached");
-				processImage(filePath, res);
-			}
+			// } else {
+			// 	console.log(filePath, "Cached");
+			// 	processImage(filePath, res);
+			// }
 		} catch(err) {
 			console.error(err);
 			return res.send({ status: "error", message: err });
@@ -266,15 +264,15 @@ const cors = corsMiddleware({
 		console.error(error);
 	}
 
-	const refresh_mins = process.env.REFRESH_MINS || 10;
-
-	setInterval(async function() {
-		try {
-			await epaLogin(page);
-		} catch(err) {
-			console.error(err);
-		}
-	}, refresh_mins * 60000);
+	// const refresh_mins = process.env.REFRESH_MINS || 1;
+	//
+	// setInterval(async function() {
+	// 	try {
+	// 		await epaLogin(page);
+	// 	} catch(err) {
+	// 		console.error(err);
+	// 	}
+	// }, refresh_mins * 60000);
 
 	// browser.close();
 })();
