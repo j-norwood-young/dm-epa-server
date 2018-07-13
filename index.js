@@ -102,7 +102,7 @@ const cors = corsMiddleware({
 			let url = Buffer.from(req.query.url, "base64").toString("ascii");
 			console.log({ url });
 			try {
-				let cookies = await page.cookies();
+				var cookies = await page.cookies();
 			} catch(err) {
 				console.error(error);
 			}
