@@ -267,15 +267,15 @@ const cors = corsMiddleware({
 		console.error(error);
 	}
 
-	// const refresh_mins = process.env.REFRESH_MINS || 1;
-	//
-	// setInterval(async function() {
-	// 	try {
-	// 		await epaLogin(page);
-	// 	} catch(err) {
-	// 		console.error(err);
-	// 	}
-	// }, refresh_mins * 60000);
+	const refresh_mins = process.env.REFRESH_MINS || 30;
+
+	setInterval(async function() {
+		try {
+			await epaLogin(page);
+		} catch(err) {
+			console.error(err);
+		}
+	}, refresh_mins * 60000);
 
 	// browser.close();
 })();
