@@ -83,7 +83,7 @@ const cors = corsMiddleware({
 	server.use(checkLogin);
 
 	server.get("/download", async (req, res) => {
-		var processImage = async (filePath, res) => {
+		const processImage = async (filePath, res) => {
 			console.time("processImage");
 			try {
 				var image = await Jimp.read(filePath);
@@ -99,13 +99,14 @@ const cors = corsMiddleware({
 				throw(err);
 			}
 		}
+
 		try {
 			let url = Buffer.from(req.query.url, "base64").toString("ascii");
 			console.log({ url });
 			try {
 				var cookies = await page.cookies();
 			} catch(err) {
-				console.error(error);
+				console.error(err);
 			}
 			let jar = request.jar();
 			let data = null;
@@ -113,22 +114,22 @@ const cors = corsMiddleware({
 				jar.setCookie(`${cookie.name}=${cookie.value}`, process.env.BASE_URL);
 			}
 			let filePath = path.resolve(`./downloads/cache/${ md5(url) }.jpg`);
-			// try {
-			// 	var fileExists = await fse.pathExists(filePath);
-			// } catch(err) {
-			// 	console.error(error);
-			// }
-			// if (!fileExists) {
+			try {
+				var fileExists = await fse.pathExists(filePath);
+			} catch(err) {
+				console.error(err);
+			}
+			if (!fileExists) {
 				var writeStream = fs.createWriteStream(filePath);
 				writeStream.on("finish", async function() {
 					console.log(filePath, "Not cached");
 					processImage(filePath, res);
 				})
 				request({ url, jar }).pipe(writeStream);
-			// } else {
-			// 	console.log(filePath, "Cached");
-			// 	processImage(filePath, res);
-			// }
+			} else {
+				console.log(filePath, "Cached");
+				processImage(filePath, res);
+			}
 		} catch(err) {
 			console.error(err);
 			return res.send({ status: "error", message: err });
