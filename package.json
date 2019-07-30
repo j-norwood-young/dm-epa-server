@@ -1,6 +1,6 @@
 {
   "name": "dm-epa-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Daily Maverick EPA Server",
   "main": "index.js",
   "scripts": {
