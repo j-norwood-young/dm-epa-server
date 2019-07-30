@@ -4,11 +4,12 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require('url');
 const fse = require("fs-extra");
-const request = require("request-promise-native");
+const request_promise = require("request-promise-native");
+const request = require("request");
 const md5 = require("md5");
 const corsMiddleware = require('restify-cors-middleware');
 const cheerio = require("cheerio");
-const Jimp = require("jimp");
+const gm = require("gm").subClass({ imageMagick: true });
 
 require("dotenv").config();
 
@@ -28,6 +29,7 @@ var authorization = (req, res, next) => {
 const epaLogin = async (page) => {
 	console.log("Loading url", process.env.LOGIN_URL);
 	try {
+		if (await page.$(".user_welcome_message") !== null) return;
 		await page.goto(process.env.LOGIN_URL);
 		// Login
 		await page.waitForSelector("input[name='LOGINNAME']");
@@ -56,6 +58,17 @@ const checkLogin = (req, res, next) => {
 const cors = corsMiddleware({
 	origins: ['*']
 });
+
+const download = function (uri, filename) {
+	return new Promise((resolve, reject) => {
+		request.head(uri, function (err, res, body) {
+			console.log('content-type:', res.headers['content-type']);
+			console.log('content-length:', res.headers['content-length']);
+
+			request(uri).pipe(fs.createWriteStream(filename)).on('close', resolve).on("error", reject);
+		});
+	});
+};
 
 (async () => {
 
@@ -86,46 +99,77 @@ const cors = corsMiddleware({
 		const processImage = async (filePath, res) => {
 			console.time("processImage");
 			try {
-				var image = await Jimp.read(filePath);
-				image.scaleToFit(1920, 1920).quality(75);
-				image.getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
-					res.set("Content-Type", Jimp.MIME_JPEG);
-					res.set("Content-Disposition", `attachment; filename=${ md5(filePath) }.jpg`);
-					res.send(buffer);
-					console.timeEnd("processImage");
-				});
+				gm(filePath)
+					.resize(1920, 1920, "^")
+					.quality(75)
+					.toBuffer("JPEG", (err, buffer) => {
+						res.set("Content-Type", "image/jpeg");
+						res.set("Content-Disposition", `attachment; filename=${md5(filePath)}.jpg`);
+						try {
+							res.send(buffer);
+						} catch(err) {
+							console.error(err);
+							res.send(500, { error: err });
+						}
+						console.timeEnd("processImage");
+					});
 			} catch(err) {
+				console.timeEnd("processImage");
 				console.error(err);
 				throw(err);
 			}
 		}
 
 		try {
-			let url = Buffer.from(req.query.url, "base64").toString("ascii");
-			console.log({ url });
+			const url = Buffer.from(req.query.url, "base64").toString("ascii");
+			const filePath = path.resolve(`./downloads/cache/${md5(url)}.jpg`);
+			console.log({ url, filePath });
 			try {
 				var cookies = await page.cookies();
 			} catch(err) {
 				console.error(err);
 			}
-			let jar = request.jar();
+			let jar = request_promise.jar();
 			let data = null;
 			for (let cookie of cookies) {
 				jar.setCookie(`${cookie.name}=${cookie.value}`, process.env.BASE_URL);
 			}
-			let filePath = path.resolve(`./downloads/cache/${ md5(url) }.jpg`);
+			let fileExists = false;
 			try {
-				var fileExists = await fse.pathExists(filePath);
+				let stats = await fse.stat(filePath);
+				fileExists = !!(stats.size);
 			} catch(err) {
-				console.error(err);
+				// console.error(err);
 			}
 			if (!fileExists) {
-				var writeStream = fs.createWriteStream(filePath);
-				writeStream.on("finish", async function() {
-					console.log(filePath, "Not cached");
+				// let current = 0;
+				// var writeStream = fs.createWriteStream(filePath);
+				// console.time(`File download: ${filePath}`);
+				// writeStream.on("end", async function() {
+				// 	console.log(filePath, "Not cached");
+				// 	console.timeEnd(`File download: ${filePath}`);
+				// 	processImage(filePath, res);
+				// })
+				// writeStream.on("data", chunk => {
+				// 	current += chunk.length;
+				// 	console.log({ current });
+				// })
+				// writeStream.on("error", err => {
+				// 	console.error(err);
+				// 	console.timeEnd(`File download: ${filePath}`);
+				// 	fse.unlink(filePath);
+				// })
+				try {
+					console.time(`File download: ${filePath}`);
+					await download({ url, jar }, filePath);
+					// const fileData = await request_promise({ url, jar });
+					// await fse.writeFile(filePath, fileData);
+					console.timeEnd(`File download: ${filePath}`);
 					processImage(filePath, res);
-				})
-				request({ url, jar }).pipe(writeStream);
+				} catch(err) {
+					console.error(err);
+					res.send(500, { error: err });
+				}
 			} else {
 				console.log(filePath, "Cached");
 				processImage(filePath, res);
@@ -136,20 +180,22 @@ const cors = corsMiddleware({
 		};
 	});
 
-	var search = async (req, res) => {
+	const search = async (req, res) => {
 		var searchstr = req.query.s;
+		console.log({ searchstr });
+		console.time(`Search: ${searchstr}`);
 		var url = process.env.SEARCH_URL.replace("SEARCHSTR", searchstr);
 		try {
 			var cookies = await page.cookies();
 		} catch(err) {
-			console.error(error);
+			console.error(err);
 		}
-		let jar = request.jar();
+		let jar = request_promise.jar();
 		for (let cookie of cookies) {
 			jar.setCookie(`${cookie.name}=${cookie.value}`, process.env.BASE_URL);
 		}
 		try {
-			var result = await request({ url, jar });
+			var result = await request_promise({ url, jar });
 		} catch(err) {
 			console.error(err);
 			return res.send({ status: "error", message: err });
@@ -159,10 +205,12 @@ const cors = corsMiddleware({
 		if (!login_check) {
 			try {
 				await epaLogin(page);
-			} catch(err) {
-				console.error(error);
+			} catch (err) {
+				console.error(err);
+				res.send(500, { error: err });
+				console.timeEnd(`Search: ${searchstr}`);
+				return;
 			}
-			return search(req, res);
 		}
 		var data = [];
 		$("div.media-item").each((i, el) => {
@@ -187,6 +235,7 @@ const cors = corsMiddleware({
 			status: "okay",
 			data
 		});
+		console.timeEnd(`Search: ${searchstr}`);
 	}
 
 	server.get("/search", search);
@@ -231,18 +280,18 @@ const cors = corsMiddleware({
 		console.error(error);
 	}
 
-	page.on("request", async request => {
+	page.on("request", async req => {
 		try {
-			var url = await request.url();
+			var url = await req.url();
 		} catch(err) {
 			console.error(error);
 		}
-		if (['image', 'stylesheet', 'font', 'script'].indexOf(request.resourceType()) !== -1) {
+		if (['image', 'stylesheet', 'font', 'script'].indexOf(req.resourceType()) !== -1) {
 			// console.log("Skipping", url);
-			request.abort();
+			req.abort();
 		} else {
 			console.log("Downloading", url);
-			request.continue();
+			req.continue();
 		}
 	});
 

@@ -4,6 +4,14 @@ An API to get images out of EPA
 ## Setup
 `npm init`
 
+### Ensure ImageMagick is installed
+
+Linux
+`apt install imagemagick`
+
+OSX
+`brew install imagemagick`
+
 ## Config
 
 .env example:
