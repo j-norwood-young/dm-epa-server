@@ -27,9 +27,9 @@ var authorization = (req, res, next) => {
 };
 
 const epaLogin = async (page) => {
-	console.log("Loading url", process.env.LOGIN_URL);
 	try {
 		if (await page.$(".user_welcome_message") !== null) return;
+		console.log("Loading url", process.env.LOGIN_URL);
 		await page.goto(process.env.LOGIN_URL);
 		// Login
 		await page.waitForSelector("input[name='LOGINNAME']");
