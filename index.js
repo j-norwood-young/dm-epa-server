@@ -321,6 +321,9 @@ const download = function (uri, filename) {
 
 	setInterval(async function() {
 		try {
+			await page.evaluate(() => {
+				location.reload(true)
+			});
 			await epaLogin(page);
 		} catch(err) {
 			console.error(err);
